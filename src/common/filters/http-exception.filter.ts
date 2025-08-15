@@ -1,33 +1,69 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, Logger } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 
-@Catch(HttpException)
+interface HttpExceptionResponse {
+  statusCode: number;
+  message: string;
+  error: string;
+}
+
+@Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
 
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    const status = exception.getStatus();
-    const exceptionResponse = exception.getResponse();
 
-    // TODO: Implement comprehensive error handling
-    // This filter should:
-    // 1. Log errors appropriately based on their severity
-    // 2. Format error responses in a consistent way
-    // 3. Include relevant error details without exposing sensitive information
-    // 4. Handle different types of errors with appropriate status codes
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message = 'Internal server error';
+    let error = null;
 
-    this.logger.error(`HTTP Exception: ${exception.message}`, exception.stack);
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
 
-    // Basic implementation (to be enhanced by candidates)
-    response.status(status).json({
+      const errorResponse = exception.getResponse();
+      if (typeof errorResponse === 'string') {
+        message = errorResponse;
+      } else if (typeof errorResponse === 'object' && errorResponse !== null) {
+        message = (errorResponse as HttpExceptionResponse).message || exception.message;
+        error = (errorResponse as HttpExceptionResponse).error ?? null;
+      } else {
+        message = exception.message;
+      }
+    }
+
+    // error payload for logging
+    const logPayload = {
+      status,
+      method: request.method,
+      path: request.url,
+      message,
+      error,
+    };
+
+    const stack = (exception as Error).stack;
+
+    this.logger.error(`HTTP Exception: ${JSON.stringify(logPayload)}`, stack);
+
+    // error response for client
+    const responsePayload = {
       success: false,
       statusCode: status,
-      message: exception.message,
+      message,
+      error,
       path: request.url,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    response.status(status).json(responsePayload);
   }
 }
