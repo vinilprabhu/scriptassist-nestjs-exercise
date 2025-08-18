@@ -10,7 +10,7 @@ import { Request, Response } from 'express';
 
 interface HttpExceptionResponse {
   statusCode: number;
-  message: string;
+  message: string | string[];
   error: string;
 }
 
@@ -24,7 +24,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = 'Internal server error';
+    let message: string | string[] = 'Internal server error';
     let error = null;
 
     if (exception instanceof HttpException) {

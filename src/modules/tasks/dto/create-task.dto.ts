@@ -1,7 +1,8 @@
-import { IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsDate, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TaskStatus } from '../enums/task-status.enum';
 import { TaskPriority } from '../enums/task-priority.enum';
+import { Type } from 'class-transformer';
 
 export class CreateTaskDto {
   @ApiProperty({ example: 'Complete project documentation' })
@@ -25,7 +26,8 @@ export class CreateTaskDto {
   priority?: TaskPriority;
 
   @ApiProperty({ example: '2023-12-31T23:59:59Z', required: false })
-  @IsDateString()
+  @IsDate()
+  @Type(() => Date)
   @IsOptional()
   dueDate?: Date;
 
